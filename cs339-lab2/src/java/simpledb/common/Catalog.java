@@ -27,8 +27,11 @@ public class Catalog {
      * Constructor.
      * Creates a new, empty catalog.
      */
+
+    private Map<String, Object[]> tableMap;
+
     public Catalog() {
-        // some code goes here
+        this.tableMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -41,7 +44,20 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        // some code goes here
+        // office hour
+        if (name == null) {
+            throw new IllegalArgumentException();
+        }
+        if (this.tableMap.containsKey(name)) {
+            this.tableMap.remove(name);
+        }
+        for (String s : this.tableMap.keySet()) {
+            if (((DbFile) this.tableMap.get(s)[0]).getId() == file.getId()) {
+                this.tableMap.remove(s);
+            }
+        }
+        Object[] o = {file, pkeyField};
+        this.tableMap.put(name, o);
     }
 
     public void addTable(DbFile file, String name) {
@@ -64,8 +80,13 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public int getTableId(String name) throws NoSuchElementException {
-        // some code goes here
-        return 0;
+        if (name == null) {
+            throw new NoSuchElementException();
+        }
+        if (!this.tableMap.containsKey(name)) {
+            throw new NoSuchElementException();
+        }
+        return ((DbFile) this.tableMap.get(name)[0]).getId();
     }
 
     /**
@@ -75,8 +96,12 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
-        // some code goes here
-        return null;
+        for (Object[] o : this.tableMap.values()) {
+            if (((DbFile) o[0]).getId() == tableid) {
+                return ((DbFile) o[0]).getTupleDesc();
+            }
+        }
+        throw new NoSuchElementException();
     }
 
     /**
@@ -86,28 +111,64 @@ public class Catalog {
      *     function passed to addTable
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
-        // some code goes here
-        return null;
+        for (Object[] o : this.tableMap.values()) {
+            if (((DbFile) o[0]).getId() == tableid) {
+                return ((DbFile) o[0]);
+            }
+        }
+        throw new NoSuchElementException();
     }
 
     public String getPrimaryKey(int tableid) {
-        // some code goes here
+        for (Object[] o : this.tableMap.values()) {
+            if (((DbFile) o[0]).getId() == tableid) {
+                return (String) o[1];
+            }
+        }
         return null;
     }
 
     public Iterator<Integer> tableIdIterator() {
-        // some code goes here
-        return null;
+        // office hour do we need to populate tableIds?
+        return new Iterator<Integer>() {
+            private Integer[] tableIds;
+            {
+                tableIds = new Integer[tableMap.size()];
+                int i = 0;
+                for (Object[] o : tableMap.values()) {
+                    tableIds[i++] = ((DbFile) o[0]).getId();
+                }
+            }
+            private int index = 0;
+
+            @Override
+            public boolean hasNext() {
+                return index < tableIds.length;
+            }
+
+            @Override
+            public Integer next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                return tableIds[index++];
+            }
+        };
+        
     }
 
     public String getTableName(int id) {
-        // some code goes here
+        for (String s : this.tableMap.keySet()) {
+            if (((DbFile) this.tableMap.get(s)[0]).getId() == id) {
+                return s;
+            }
+        }
         return null;
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
-        // some code goes here
+        this.tableMap.clear();
     }
     
     /**
