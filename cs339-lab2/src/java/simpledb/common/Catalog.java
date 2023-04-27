@@ -129,7 +129,6 @@ public class Catalog {
     }
 
     public Iterator<Integer> tableIdIterator() {
-        // office hour do we need to populate tableIds?
         return new Iterator<Integer>() {
             private Integer[] tableIds;
             {

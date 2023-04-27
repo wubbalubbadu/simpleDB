@@ -11,6 +11,7 @@ import java.io.*;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.LinkedHashMap;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -24,9 +25,13 @@ import java.util.concurrent.ConcurrentMap;
  * @Threadsafe, all fields are final
  */
 public class BufferPool {
+
+    private ConcurrentHashMap<TransactionId, Object[]> transactions;
+    private LinkedHashMap<PageId, Page> cache;
+    private int maxNumPages;
+
     /** Bytes per page, including header. */
     private static final int DEFAULT_PAGE_SIZE = 4096;
-
     private static int pageSize = DEFAULT_PAGE_SIZE;
     
     /** Default number of pages passed to the constructor. This is used by
@@ -40,7 +45,9 @@ public class BufferPool {
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // some code goes here
+        this.maxNumPages = numPages;
+        this.cache = new LinkedHashMap<>();
+        this.transactions = new ConcurrentHashMap<>();
     }
     
     public static int getPageSize() {
@@ -72,10 +79,23 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        // check permission? office
+        // if locked, throw transaction aborted exception
+        
+        if (this.cache.containsKey(pid)) {
+            return this.cache.get(pid);
+        }
+        if (this.cache.size() >= maxNumPages) {
+            throw new DbException("BufferPool is full");
+        }
+        Object[] transactionDetails = {pid, perm};
+        this.transactions.put(tid, transactionDetails);
+
+        Page newPage = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
+        this.cache.put(pid, newPage);
+        return newPage;
     }
 
     /**
