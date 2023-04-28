@@ -296,21 +296,21 @@ public class HeapPage implements Page {
      * Returns true if associated slot on this page is filled.
      */
     public boolean isSlotUsed(int i) {
-        System.out.println(getNumTuples());
-        System.out.println(i);
-        if (i < 0 || i >= getNumTuples()) {
-            return false;
-        }
-        int headerIndex = i / 8;
-        int offset = i % 8;
-        ByteBuffer buffer = ByteBuffer.wrap(this.header);
-        
-        byte headerByte = buffer.get(headerIndex);
-        return (headerByte & (1 << offset)) > 0;
-//    	
-//    	if(i < 0 || i/8 >= header.length) return false;
-//    	
-//    	return ((this.header[i/8]>>i%8)!=0);
+//        System.out.println(getNumTuples());
+//        System.out.println(i);
+//        if (i < 0 || i >= getNumTuples()) {
+//            return false;
+//        }
+//        int headerIndex = i / 8;
+//        int offset = i % 8;
+//        ByteBuffer buffer = ByteBuffer.wrap(this.header);
+//        
+//        byte headerByte = buffer.get(headerIndex);
+//        return (headerByte & (1 << offset)) > 0;
+    	
+    	if(i < 0 || i/8 >= header.length) return false;
+    	
+    	return ((this.header[i/8]>>i%8)!=0);
     	
     	  
         
