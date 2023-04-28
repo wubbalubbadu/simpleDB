@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="cs339-lab2/src/java"/>
+	<classpathentry kind="src" path="cs339-lab2/test"/>
+	<classpathentry kind="lib" path="cs339-lab2/lib/ant-contrib-1.0b3.jar"/>
+	<classpathentry kind="lib" path="cs339-lab2/lib/hamcrest-core-1.3.jar"/>
+	<classpathentry kind="lib" path="cs339-lab2/lib/jline-0.9.94.jar"/>
+	<classpathentry kind="lib" path="cs339-lab2/lib/junit-4.13.1.jar"/>
+	<classpathentry kind="output" path="cs339-lab2/bin/src"/>
+</classpath>

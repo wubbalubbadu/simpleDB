@@ -118,6 +118,7 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
         // office hour 
+    	// fetch heap page id, 
         return new DbFileIterator() {
             private int curPageNum = 0;
             private Iterator<Tuple> curPageTupleIterator = null;

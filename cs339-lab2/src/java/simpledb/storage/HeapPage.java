@@ -307,6 +307,13 @@ public class HeapPage implements Page {
         
         byte headerByte = buffer.get(headerIndex);
         return (headerByte & (1 << offset)) > 0;
+//    	
+//    	if(i < 0 || i/8 >= header.length) return false;
+//    	
+//    	return ((this.header[i/8]>>i%8)!=0);
+    	
+    	  
+        
     }
 
     /**
