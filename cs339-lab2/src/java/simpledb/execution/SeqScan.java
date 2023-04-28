@@ -5,7 +5,9 @@ import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 import simpledb.common.Type;
 import simpledb.common.DbException;
+import simpledb.storage.DbFile;
 import simpledb.storage.DbFileIterator;
+import simpledb.storage.HeapFile;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 
@@ -19,6 +21,10 @@ import java.util.*;
 public class SeqScan implements OpIterator {
 
     private static final long serialVersionUID = 1L;
+    private TransactionId tid;
+    private int tableid;
+    private String tableAlias;
+    private DbFileIterator iterator;
 
     /**
      * Creates a sequential scan over the specified table as a part of the
@@ -37,7 +43,9 @@ public class SeqScan implements OpIterator {
      *            tableAlias.null, or null.null).
      */
     public SeqScan(TransactionId tid, int tableid, String tableAlias) {
-        // some code goes here
+        this.tableAlias = tableAlias;
+        this.tableid = tableid;
+        this.tid = tid;
     }
 
     /**
@@ -46,7 +54,7 @@ public class SeqScan implements OpIterator {
      *       be the actual name of the table in the catalog of the database
      * */
     public String getTableName() {
-        return null;
+        return Database.getCatalog().getTableName(tableid);
     }
 
     /**
@@ -54,8 +62,7 @@ public class SeqScan implements OpIterator {
      * */
     public String getAlias()
     {
-        // some code goes here
-        return null;
+        return this.tableAlias;
     }
 
     /**
@@ -71,7 +78,8 @@ public class SeqScan implements OpIterator {
      *            tableAlias.null, or null.null).
      */
     public void reset(int tableid, String tableAlias) {
-        // some code goes here
+        this.tableAlias = tableAlias;
+        this.tableid = tableid;
     }
 
     public SeqScan(TransactionId tid, int tableId) {
@@ -79,7 +87,12 @@ public class SeqScan implements OpIterator {
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        HeapFile file = (HeapFile) Database.getCatalog().getDatabaseFile(tableid);
+        if (file == null) {
+            throw new DbException("file is null");
+        }
+        this.iterator = file.iterator(tid);
+        this.iterator.open();
     }
 
     /**
@@ -93,27 +106,48 @@ public class SeqScan implements OpIterator {
      *         prefixed with the tableAlias string from the constructor.
      */
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        TupleDesc td = Database.getCatalog().getTupleDesc(tableid);
+        Type[] typeAr = new Type[td.numFields()];
+        String[] fieldAr = new String[td.numFields()];
+        for (int i = 0; i < td.numFields(); i++) {
+            typeAr[i] = td.getFieldType(i);
+            fieldAr[i] = tableAlias + "." + td.getFieldName(i);
+        }
+        return new TupleDesc(typeAr, fieldAr);
     }
 
     public boolean hasNext() throws TransactionAbortedException, DbException {
-        // some code goes here
-        return false;
+        if (this.iterator == null) {
+            return false;
+        }
+        else {
+            return this.iterator.hasNext();
+        }
     }
 
     public Tuple next() throws NoSuchElementException,
             TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        if (this.iterator == null) {
+            return null;
+        }
+        else if (this.iterator.hasNext()) {
+            return this.iterator.next();
+        }
+        else {
+            throw new NoSuchElementException();
+        }
     }
 
     public void close() {
-        // some code goes here
+        if (this.iterator != null) {
+            this.iterator.close();
+        }
     }
 
     public void rewind() throws DbException, NoSuchElementException,
             TransactionAbortedException {
-        // some code goes here
+        if (this.iterator != null) {
+            this.iterator.rewind();
+        }
     }
 }

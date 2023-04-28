@@ -44,7 +44,6 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        // office hour
         if (name == null) {
             throw new IllegalArgumentException();
         }

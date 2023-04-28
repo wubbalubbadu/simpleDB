@@ -122,6 +122,7 @@ public class HeapPage implements Page {
     private Tuple readNextTuple(DataInputStream dis, int slotId) throws NoSuchElementException {
         // if associated bit is not set, read forward to the next tuple, and
         // return null.
+       
         if (!isSlotUsed(slotId)) {
             for (int i=0; i<td.getSize(); i++) {
                 try {
@@ -295,9 +296,15 @@ public class HeapPage implements Page {
      * Returns true if associated slot on this page is filled.
      */
     public boolean isSlotUsed(int i) {
+        System.out.println(getNumTuples());
+        System.out.println(i);
+        if (i < 0 || i >= getNumTuples()) {
+            return false;
+        }
         int headerIndex = i / 8;
         int offset = i % 8;
         ByteBuffer buffer = ByteBuffer.wrap(this.header);
+        
         byte headerByte = buffer.get(headerIndex);
         return (headerByte & (1 << offset)) > 0;
     }

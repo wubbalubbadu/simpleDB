@@ -81,19 +81,24 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-        // check permission? office
+        // check permission? office hour
+        // do we need lock
         // if locked, throw transaction aborted exception
-        
+
         if (this.cache.containsKey(pid)) {
             return this.cache.get(pid);
         }
         if (this.cache.size() >= maxNumPages) {
             throw new DbException("BufferPool is full");
         }
+
         Object[] transactionDetails = {pid, perm};
         this.transactions.put(tid, transactionDetails);
 
         Page newPage = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
+        if (newPage == null) {
+            throw new DbException("Page not found");
+        }
         this.cache.put(pid, newPage);
         return newPage;
     }
