@@ -78,7 +78,7 @@ public class HeapFile implements DbFile {
         try {
             raf = new RandomAccessFile(this.file, "r");
             raf.seek(offset);
-            raf.readFully(data, 0, BufferPool.getPageSize());
+            raf.read(data);
             raf.close();
             return new HeapPage((HeapPageId) pid, data);
         } catch (IOException e) {
