@@ -49,13 +49,15 @@ public class HeapPage implements Page {
         this.td = Database.getCatalog().getTupleDesc(id.getTableId());
         this.numSlots = getNumTuples();
         DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
-
         // allocate and read the header slots of this page
         header = new byte[getHeaderSize()];
         for (int i=0; i<header.length; i++)
             header[i] = dis.readByte();
-        
+        System.out.println(header.length);
+        System.out.println(this.numSlots);
         tuples = new Tuple[numSlots];
+        System.out.println(tuples.length);
+        
         try{
             // allocate and read the actual records of this page
             for (int i=0; i<tuples.length; i++)
@@ -64,7 +66,6 @@ public class HeapPage implements Page {
             e.printStackTrace();
         }
         dis.close();
-
         setBeforeImage();
     }
 
@@ -72,8 +73,7 @@ public class HeapPage implements Page {
         @return the number of tuples on this page
     */
     private int getNumTuples() {        
-        int tupleSize = Database.getCatalog().getTupleDesc(pid.getTableId()).getSize();
-        return (int) Math.floor( ((double) BufferPool.getPageSize()*8) / (tupleSize * 8 + 1));
+        return (int) Math.floor( (BufferPool.getPageSize()*8.0) / (this.td.getSize() * 8.0 + 1));
     }
 
     /**
@@ -81,7 +81,7 @@ public class HeapPage implements Page {
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
     private int getHeaderSize() {        
-        return (int) Math.ceil(getNumTuples()/ 8);
+        return (int) Math.ceil(getNumTuples()/ 8.0);
     }
     
     /** Return a view of this page before it was modified
@@ -284,7 +284,7 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         int count = 0;
-        for (int i=0; i<getNumTuples(); i++) {
+        for (int i=0; i<numSlots; i++) {
             if (!isSlotUsed(i)) {
                 count++;
             }
@@ -296,26 +296,15 @@ public class HeapPage implements Page {
      * Returns true if associated slot on this page is filled.
      */
     public boolean isSlotUsed(int i) {
-//        System.out.println(getNumTuples());
-//        System.out.println(i);
-//        if (i < 0 || i >= getNumTuples()) {
-//            return false;
-//        }
-//        int headerIndex = i / 8;
-//        int offset = i % 8;
-//        ByteBuffer buffer = ByteBuffer.wrap(this.header);
-//        
-//        byte headerByte = buffer.get(headerIndex);
-//        return (headerByte & (1 << offset)) > 0;
-    	
-    	if(i < 0 || i/8 >= header.length) return false;
-    	
-    	return ((this.header[i/8]>>i%8)!=0);
-    	
-    	  
-        
+        // if (i < 0 || i / 8 >= header.length) {
+        //     System.out.println("i = " + i + ", header.length = " + header.length);
+        //     System.out.println("num tups"+ getNumTuples());
+        //     // System.out.println("num slots"+getNumEmptySlots());
+        //     System.out.println("header size"+getHeaderSize());
+        // }
+        return (header[i/8] & (1 << (i % 8))) != 0;
     }
-
+    
     /**
      * Abstraction to fill or clear a slot on this page.
      */
@@ -330,30 +319,41 @@ public class HeapPage implements Page {
      */
     public Iterator<Tuple> iterator() {
         return new Iterator<Tuple>() {
-            private Tuple[] myTuples = new Tuple[getNumTuples() - getNumEmptySlots()];
-            {
-               for (int i = 0; i < getNumTuples(); i++) {
-                   if (isSlotUsed(i)) {
-                        myTuples[i] = tuples[i];
-                   }
-               }
-            }
             private int index = 0;
-
+            private int offset = 0;
+    
             @Override
             public boolean hasNext() {
-                return index < myTuples.length;
+                while (index < header.length) {
+                    int cur = index * 8 + offset;
+                    if (isSlotUsed(cur)) {
+                        return true;
+                    }
+                    increment();
+                }
+                return false;
             }
-
+    
             @Override
             public Tuple next() {
-                if (!hasNext()) {
-                    throw new NoSuchElementException();
+                if (hasNext()) {
+                    int cur = index * 8 + offset;
+                    increment();
+                    return tuples[cur];
                 }
-                return myTuples[index++];
+                throw new NoSuchElementException();
+            }
+    
+            private void increment() {
+                offset++;
+                if (offset >= 8) {
+                    offset = 0;
+                    index++;
+                }
             }
         };
     }
+    
 
 }
 

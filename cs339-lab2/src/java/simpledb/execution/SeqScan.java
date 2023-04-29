@@ -46,6 +46,7 @@ public class SeqScan implements OpIterator {
         this.tableAlias = tableAlias;
         this.tableid = tableid;
         this.tid = tid;
+        this.iterator = null;
     }
 
     /**
@@ -92,6 +93,9 @@ public class SeqScan implements OpIterator {
             throw new DbException("file is null");
         }
         this.iterator = file.iterator(tid);
+        if (this.iterator == null) {
+            throw new DbException("iterator is null");
+        }
         this.iterator.open();
     }
 
@@ -127,14 +131,11 @@ public class SeqScan implements OpIterator {
 
     public Tuple next() throws NoSuchElementException,
             TransactionAbortedException, DbException {
-        if (this.iterator == null) {
-            return null;
-        }
-        else if (this.iterator.hasNext()) {
-            return this.iterator.next();
+        if (this.iterator == null || !this.iterator.hasNext()) {
+            throw new NoSuchElementException();
         }
         else {
-            throw new NoSuchElementException();
+            return this.iterator.next();
         }
     }
 
