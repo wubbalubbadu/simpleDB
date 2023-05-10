@@ -267,14 +267,16 @@ public class BTreeFile implements DbFile {
             throw new DbException("Page is empty");
         }
         Tuple mid = null;
-        for (int i=0; i < page.getNumTuples()/2; i++) {
+        
+        int midIndex = page.getNumTuples() % 2 == 0 ? page.getNumTuples() / 2 : page.getNumTuples() / 2 + 1;
+        for (int i=0; i < midIndex; i++) {
             mid = iterator.next();
         }
-
         // copy up into the parent page
         BTreeInternalPage parent = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
         BTreeEntry entry = new BTreeEntry(mid.getField(keyField), page.getId(), newPage.getId());
         parent.insertEntry(entry);
+        
 
         // move half of the tuples to the new page
         while (iterator.hasNext()) {
@@ -290,8 +292,9 @@ public class BTreeFile implements DbFile {
         }
         
         // update parent pointers
-        newPage.setParentId(parent.getId());
+        // updateParentPointers(tid, dirtypages, parent.getId());
         page.setParentId(parent.getId());
+        newPage.setParentId(parent.getId());
         
         // update the sibling pointers
         newPage.setLeftSiblingId(page.getId());
@@ -369,36 +372,26 @@ public class BTreeFile implements DbFile {
             // iterator over the old page
             Iterator<BTreeEntry> iterator = page.iterator();
             // move to middle point
-            
+
             if (!iterator.hasNext()) {
                 throw new DbException("Page is empty");
             }
             
             BTreeEntry mid = null;
-            for (int i = 0; i < page.getNumEntries()/2; i++) {
+            int midIndex = page.getNumEntries() % 2 == 0 ? page.getNumEntries() / 2 : page.getNumEntries() / 2 + 1;
+            for (int i = 0; i < midIndex; i++) {
                 mid = iterator.next();
             }
-
-            // Iterator<BTreeEntry> iterator2 = page.iterator();
-            // while (iterator2.hasNext()) {
-            //     System.out.println(iterator2.next().getKey());
-            // }
-
-            // Iterator<BTreeEntry> iterator3 = page.iterator();
-            // while (iterator3.hasNext()) {
-            //     System.out.println(iterator3.next().getKey());
-            // }
             
             page.deleteKeyAndRightChild(mid);
             // push the middle key up into the parent page
-            parentPage.insertEntry(mid);
-
+            BTreeEntry newEntry = new BTreeEntry(mid.getKey(), page.getId(), newPage.getId());
+            parentPage.insertEntry(newEntry);
+        
                // might need to split the parent page
             if (parentPage.getMaxEntries() < parentPage.getNumEntries()) {
-                System.out.println("splitting parent");
                 parentPage = splitInternalPage(tid, dirtypages, parentPage, field);
             }
-        
 
             // move half of the entries to the new page, starting from the one after the middle key
             while (iterator.hasNext()) {
@@ -411,7 +404,6 @@ public class BTreeFile implements DbFile {
             updateParentPointers(tid, dirtypages, newPage);
             updateParentPointers(tid, dirtypages, page);
             
-
             // update dirty pages
             System.out.println("updating dirty pages");
             System.out.println(page.getId()+" "+newPage.getId()+" "+parentPage.getId());

@@ -57,14 +57,17 @@ simpledb.common.Database
 simpledb.execution.Predicate$Op
 simpledb.systemtest.SimpleDbTestBase
 java.io.PrintStream
+java.lang.invoke.MethodHandles$Lookup
 simpledb.index.BTreeLeafPage
 java.util.Iterator
 simpledb.storage.Tuple
+java.lang.invoke.MethodHandles
 simpledb.storage.Field
 java.io.File
 java.lang.Exception
 simpledb.index.BTreeFile
 simpledb.index.BTreeInternalPage
+java.lang.invoke.StringConcatFactory
 org.junit.Assert
 ||:simpledb.index.BTreePageId
 java.util.Objects
