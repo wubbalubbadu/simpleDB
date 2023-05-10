@@ -251,9 +251,65 @@ public class BTreeFile implements DbFile {
         // the new entry.  getParentWithEmtpySlots() will be useful here.  Don't forget to update
         // the sibling pointers of all the affected leaf pages.  Return the page into which a
         // tuple with the given key field should be inserted.
-         return null;
+        
+        // create new page to the right
 
+        if (page.getId().pgcateg() != BTreePageId.LEAF)
+            throw new DbException("page is not a leaf page");
 
+        BTreeLeafPage newPage = (BTreeLeafPage) getEmptyPage(tid, dirtypages, BTreePageId.LEAF);
+
+        // iterator over the old page
+        Iterator<Tuple> iterator = page.iterator();
+        // move to middle point
+        
+        if (!iterator.hasNext()) {
+            throw new DbException("Page is empty");
+        }
+        Tuple mid = null;
+        for (int i=0; i < page.getNumTuples()/2; i++) {
+            mid = iterator.next();
+        }
+
+        // copy up into the parent page
+        BTreeInternalPage parent = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
+        BTreeEntry entry = new BTreeEntry(mid.getField(keyField), page.getId(), newPage.getId());
+        parent.insertEntry(entry);
+
+        // move half of the tuples to the new page
+        while (iterator.hasNext()) {
+            Tuple tuple = iterator.next();
+            page.deleteTuple(tuple);
+            newPage.insertTuple(tuple);
+        }
+        
+        // might need to split the parent page
+        if (parent.getMaxEntries() < parent.getNumEntries()) {
+            System.out.println("splitting parent");
+            parent = splitInternalPage(tid, dirtypages, parent, field);
+        }
+        
+        // update parent pointers
+        newPage.setParentId(parent.getId());
+        page.setParentId(parent.getId());
+        
+        // update the sibling pointers
+        newPage.setLeftSiblingId(page.getId());
+        newPage.setRightSiblingId(page.getRightSiblingId());
+        page.setRightSiblingId(newPage.getId());
+
+        // update dirty pages
+        dirtypages.put(page.getId(), page);
+        dirtypages.put(newPage.getId(), newPage);
+        dirtypages.put(parent.getId(), parent);
+
+        // return the page
+        if (field.compare(Op.LESS_THAN_OR_EQ, entry.getKey())) {
+            return page;
+        } else {
+            return newPage;
+        }
+    
     }
 
 
@@ -289,7 +345,88 @@ public class BTreeFile implements DbFile {
         // the parent pointers of all the children moving to the new page.  updateParentPointers()
         // will be useful here.  Return the page into which an entry with the given key field
         // should be inserted.
-         return null;
+        
+
+        // if current page is root page
+        if (page.getId().pgcateg() != BTreePageId.INTERNAL) {
+            throw new DbException("Page is not an internal page");
+        }
+        if (page.getParentId() == null) {
+            // create a new root page
+            BTreeInternalPage newRootPage = (BTreeInternalPage) getEmptyPage(tid, dirtypages, BTreePageId.INTERNAL);
+            // update root pointer page to the new page created
+            BTreeRootPtrPage rootPtrPage = getRootPtrPage(tid, dirtypages);
+            rootPtrPage.setRootId(newRootPage.getId());
+            // update parent pointers
+            page.setParentId(newRootPage.getId());
+            // recursive call to split the current page
+            splitInternalPage(tid, dirtypages, page, field);
+        } else {
+            // get parent page
+            BTreeInternalPage parentPage = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
+            // create a new page to the right
+            BTreeInternalPage newPage = (BTreeInternalPage) getEmptyPage(tid, dirtypages, BTreePageId.INTERNAL);
+            // iterator over the old page
+            Iterator<BTreeEntry> iterator = page.iterator();
+            // move to middle point
+            
+            if (!iterator.hasNext()) {
+                throw new DbException("Page is empty");
+            }
+            
+            BTreeEntry mid = null;
+            for (int i = 0; i < page.getNumEntries()/2; i++) {
+                mid = iterator.next();
+            }
+
+            // Iterator<BTreeEntry> iterator2 = page.iterator();
+            // while (iterator2.hasNext()) {
+            //     System.out.println(iterator2.next().getKey());
+            // }
+
+            // Iterator<BTreeEntry> iterator3 = page.iterator();
+            // while (iterator3.hasNext()) {
+            //     System.out.println(iterator3.next().getKey());
+            // }
+            
+            page.deleteKeyAndRightChild(mid);
+            // push the middle key up into the parent page
+            parentPage.insertEntry(mid);
+
+               // might need to split the parent page
+            if (parentPage.getMaxEntries() < parentPage.getNumEntries()) {
+                System.out.println("splitting parent");
+                parentPage = splitInternalPage(tid, dirtypages, parentPage, field);
+            }
+        
+
+            // move half of the entries to the new page, starting from the one after the middle key
+            while (iterator.hasNext()) {
+                BTreeEntry entry = iterator.next();
+                page.deleteKeyAndRightChild(entry);
+                newPage.insertEntry(entry);
+            }
+
+            // update parent pointers
+            updateParentPointers(tid, dirtypages, newPage);
+            updateParentPointers(tid, dirtypages, page);
+            
+
+            // update dirty pages
+            System.out.println("updating dirty pages");
+            System.out.println(page.getId()+" "+newPage.getId()+" "+parentPage.getId());
+
+            dirtypages.put(page.getId(), page);
+            dirtypages.put(newPage.getId(), newPage);
+            dirtypages.put(parentPage.getId(), parentPage);
+
+            if (field.compare(Op.LESS_THAN_OR_EQ, mid.getKey())) {
+                return page;
+            } else {
+                return newPage;
+            } 
+        }
+        return null;
 
     }
 

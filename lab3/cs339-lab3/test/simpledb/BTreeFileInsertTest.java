@@ -117,13 +117,23 @@ public class BTreeFileInsertTest extends SimpleDbTestBase {
 		BTreeInternalPage otherPage;
 		assertEquals(1, parent.getNumEntries());
 		BTreeEntry parentEntry = parent.iterator().next();
+		// System.out.println(parentEntry.getLeftChild() + " " + parentEntry.getRightChild());
+		// for (PageId child : dirtypages.keySet()) {
+		// 	System.out.println(child);
+		// }
+		
+		System.out.println(parentEntry.getLeftChild()+" "+parentEntry.getRightChild());
+
 		if(parentEntry.getLeftChild().equals(page.getId())) {
 			otherPage = (BTreeInternalPage) dirtypages.get(parentEntry.getRightChild());
+			System.out.println("right");
+			System.out.println(otherPage.getId());
 			assertTrue(field.compare(Op.LESS_THAN_OR_EQ, 
 					otherPage.iterator().next().getKey()));
 		}
 		else { // parentEntry.getRightChild().equals(page.getId())
 			otherPage = (BTreeInternalPage) dirtypages.get(parentEntry.getLeftChild());
+			System.out.println(otherPage.getId());
 			assertTrue(field.compare(Op.GREATER_THAN_OR_EQ, 
 					otherPage.reverseIterator().next().getKey()));
 		}
