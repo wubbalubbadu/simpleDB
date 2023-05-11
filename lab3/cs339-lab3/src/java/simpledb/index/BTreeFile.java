@@ -253,6 +253,9 @@ public class BTreeFile implements DbFile {
         // tuple with the given key field should be inserted.
         
         // create new page to the right
+        System.out.println("SPITTING LEAF PAGE " + page.getId());
+        System.out.println("Before splitting: page id = " + page.getId() + ", num tuples = " + page.getNumTuples());
+       
 
         if (page.getId().pgcateg() != BTreePageId.LEAF)
             throw new DbException("page is not a leaf page");
@@ -267,33 +270,37 @@ public class BTreeFile implements DbFile {
             throw new DbException("Page is empty");
         }
         Tuple mid = null;
-        
         int midIndex = page.getNumTuples() % 2 == 0 ? page.getNumTuples() / 2 : page.getNumTuples() / 2 + 1;
         for (int i=0; i < midIndex; i++) {
             mid = iterator.next();
         }
+
+        System.out.println("Middle index = " + midIndex + ", key of middle tuple = " + mid.getField(keyField));
         // copy up into the parent page
+
         BTreeInternalPage parent = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
+        System.out.println("Parent page id = " + parent.getId()+ ", num tuples = " + parent.getNumEntries()+ ", max entries = "+parent.getMaxEntries());
+        
         BTreeEntry entry = new BTreeEntry(mid.getField(keyField), page.getId(), newPage.getId());
         parent.insertEntry(entry);
         
-
         // move half of the tuples to the new page
         while (iterator.hasNext()) {
             Tuple tuple = iterator.next();
             page.deleteTuple(tuple);
             newPage.insertTuple(tuple);
         }
-        
-        // might need to split the parent page
-        if (parent.getMaxEntries() < parent.getNumEntries()) {
-            System.out.println("splitting parent");
-            parent = splitInternalPage(tid, dirtypages, parent, field);
-        }
+        System.out.println("After splitting: original page id = " + page.getId() + ", num tuples = " + page.getNumTuples());
+        System.out.println("After splitting: new page id = " + newPage.getId() + ", num tuples = " + newPage.getNumTuples());
+        // // might need to split the parent page
+        // if (parent.getMaxEntries() < parent.getNumEntries()) {
+        //     System.out.println("splitting parent");
+        //     parent = splitInternalPage(tid, dirtypages, parent, field);
+        // }
         
         // update parent pointers
-        page.setParentId(parent.getId());
-        newPage.setParentId(parent.getId());
+        // page.setParentId(parent.getId());
+        // newPage.setParentId(parent.getId());
         updateParentPointers(tid, dirtypages, parent);
         
         // update the sibling pointers
@@ -305,18 +312,19 @@ public class BTreeFile implements DbFile {
         newPage.setRightSiblingId(page.getRightSiblingId());
         page.setRightSiblingId(newPage.getId());
 
+        System.out.println("After updating sibling pointers: new page's left sibling = " + newPage.getLeftSiblingId() + ", right sibling = " + newPage.getRightSiblingId());
+        System.out.println("After updating sibling pointers: original page's right sibling = " + page.getRightSiblingId());
         // update dirty pages
-        dirtypages.put(page.getId(), page);
-        dirtypages.put(newPage.getId(), newPage);
-        dirtypages.put(parent.getId(), parent);
+        getPage(tid, dirtypages, page.getId(), Permissions.READ_WRITE);
+        getPage(tid, dirtypages, newPage.getId(), Permissions.READ_WRITE);
+        getPage(tid, dirtypages, parent.getId(), Permissions.READ_WRITE);
 
         // return the page
-        if (field.compare(Op.LESS_THAN, newPage.iterator().next().getField(keyField))) {
+        if (field.compare(Op.LESS_THAN, mid.getField(keyField))) {
             return page;
         } else {
             return newPage;
         }
-    
     }
 
 
@@ -353,7 +361,10 @@ public class BTreeFile implements DbFile {
         // will be useful here.  Return the page into which an entry with the given key field
         // should be inserted.
         
+        System.out.println("SPLIT INTERNAL PAGE");
+        System.out.println("Before splitting: page id = " + page.getId() + ", num entries = " + page.getNumEntries());
 
+    
         // if current page is root page
         if (page.getId().pgcateg() != BTreePageId.INTERNAL) {
             throw new DbException("Page is not an internal page");
@@ -383,6 +394,7 @@ public class BTreeFile implements DbFile {
             for (int i = 0; i < midIndex; i++) {
                 mid = iterator.next();
             }
+            System.out.println("Middle index = " + midIndex + ", key of middle entry = " + mid.getKey());
             
             page.deleteKeyAndRightChild(mid);
             // push the middle key up into the parent page
@@ -390,10 +402,10 @@ public class BTreeFile implements DbFile {
             BTreeInternalPage parentPage = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), mid.getKey());
             parentPage.insertEntry(midEntry);
         
-            // might need to split the parent page
-            if (parentPage.getMaxEntries() < parentPage.getNumEntries()) {
-                parentPage = splitInternalPage(tid, dirtypages, parentPage, field);
-            }
+            // // might need to split the parent page
+            // if (parentPage.getMaxEntries() < parentPage.getNumEntries()) {
+            //     parentPage = splitInternalPage(tid, dirtypages, parentPage, field);
+            // }
 
             // move half of the entries to the new page, starting from the one after the middle key
             while (iterator.hasNext()) {
@@ -401,7 +413,8 @@ public class BTreeFile implements DbFile {
                 page.deleteKeyAndRightChild(entry);
                 newPage.insertEntry(entry);
             }
-
+            System.out.println("After splitting: original page id = " + page.getId() + ", num entries = " + page.getNumEntries());
+            System.out.println("After splitting: new page id = " + newPage.getId() + ", num entries = " + newPage.getNumEntries());
             // update parent pointers
             updateParentPointers(tid, dirtypages, newPage);
             updateParentPointers(tid, dirtypages, page);
@@ -412,11 +425,13 @@ public class BTreeFile implements DbFile {
             // update dirty pages
             // System.out.println("updating dirty pages");
             // System.out.println(page.getId()+" "+newPage.getId()+" "+parentPage.getId());
-            dirtypages.put(page.getId(), page);
-            dirtypages.put(newPage.getId(), newPage);
-            dirtypages.put(parentPage.getId(), parentPage);
+            getPage(tid, dirtypages, page.getId(), Permissions.READ_WRITE);
+            getPage(tid, dirtypages, newPage.getId(), Permissions.READ_WRITE);
+            getPage(tid, dirtypages, parentPage.getId(), Permissions.READ_WRITE);
+            System.out.println("After updating parent pointers: new page's parent = " + newPage.getParentId());
+            System.out.println("After updating parent pointers: original page's parent = " + page.getParentId());
 
-            if (field.compare(Op.LESS_THAN, newPage.iterator().next().getKey())) {
+            if (field.compare(Op.LESS_THAN, mid.getKey())) {
                 return page;
             } else {
                 return newPage;
@@ -582,14 +597,25 @@ public class BTreeFile implements DbFile {
         // find and lock the left-most leaf page corresponding to the key field,
         // and split the leaf page if there are no more slots available
         BTreeLeafPage leafPage = findLeafPage(tid, dirtypages, rootId, Permissions.READ_WRITE, t.getField(keyField));
+        System.out.println("find leaf page: " + leafPage.getId()+ " with key: " + t.getField(keyField));
+        System.out.println("leafPage: " + leafPage.getId() + " has " + leafPage.getNumEmptySlots() + " empty slots");
+        Iterator it1 = leafPage.iterator();
+        while(it1.hasNext()) {
+            System.out.println("tuple: " + it1.next());
+        }
         if (leafPage.getNumEmptySlots() == 0) {
             // System.out.println("split leaf page"+ leafPage.getId());
             leafPage = splitLeafPage(tid, dirtypages, leafPage, t.getField(keyField));
+            System.out.println("split leaf page: the page returned" + leafPage.getId());
         }
         // System.out.println("insert to "+"leafPage: " + leafPage.getId());
         // insert the tuple into the leaf page
-        // System.out.println("insert tuple: " + t);
+        // System.out.println("insert tuple: " + t + " to leafPage: " + leafPage.getId());
         leafPage.insertTuple(t);
+        Iterator it = leafPage.iterator();
+        while(it.hasNext()) {
+            System.out.println("tuple: " + it.next());
+        }
 
         return new ArrayList<>(dirtypages.values());
     }

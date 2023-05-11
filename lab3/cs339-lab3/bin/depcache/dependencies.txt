@@ -240,16 +240,20 @@ simpledb.execution.Predicate
 java.io.ByteArrayInputStream
 java.io.DataOutputStream
 java.lang.Boolean
+java.lang.String
 java.text.ParseException
 java.util.NoSuchElementException
 simpledb.execution.Predicate$Op
+java.io.PrintStream
 simpledb.storage.PageId
+java.lang.invoke.MethodHandles$Lookup
 simpledb.index.BTreeLeafPage
 java.util.Iterator
 simpledb.index.BTreePage
 simpledb.common.DbException
 simpledb.common.Type
 simpledb.storage.Tuple
+java.lang.invoke.MethodHandles
 java.io.IOException
 simpledb.index.BTreeLeafPageIterator
 java.lang.ArrayIndexOutOfBoundsException
@@ -258,6 +262,7 @@ simpledb.storage.RecordId
 java.lang.Object
 java.lang.Class
 simpledb.common.Debug
+java.lang.invoke.StringConcatFactory
 ||:simpledb.systemtest.FilterBase
 simpledb.systemtest.SimpleDbTestBase
 simpledb.systemtest.FilterBase
@@ -2398,6 +2403,7 @@ simpledb.transaction.TransactionId
 java.util.Map
 simpledb.common.Database
 simpledb.common.Permissions
+java.lang.String
 simpledb.execution.Predicate$Op
 java.io.PrintStream
 simpledb.storage.PageId
@@ -2612,7 +2618,6 @@ junit.framework.JUnit4TestAdapter
 simpledb.index.BTreeUtility
 simpledb.storage.IntField
 simpledb.index.BTreeRootPtrPage
-java.util.HashMap
 java.util.Random
 simpledb.index.BTreePageId
 simpledb.storage.BufferPool
@@ -2629,7 +2634,6 @@ simpledb.index.BTreeLeafPage
 java.util.Iterator
 simpledb.storage.Tuple
 java.lang.invoke.MethodHandles
-simpledb.index.BTreeChecker
 simpledb.storage.Field
 java.io.File
 simpledb.storage.DbFileIterator
