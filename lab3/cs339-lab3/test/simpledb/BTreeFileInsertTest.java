@@ -125,22 +125,22 @@ public class BTreeFileInsertTest extends SimpleDbTestBase {
 
 		if(parentEntry.getLeftChild().equals(page.getId())) {
 			otherPage = (BTreeInternalPage) dirtypages.get(parentEntry.getRightChild());
-			System.out.println("right");
-			System.out.println(otherPage.getId());
+			// System.out.println("right");
+			// System.out.println(otherPage.getId());
 			assertTrue(field.compare(Op.LESS_THAN_OR_EQ, 
 					otherPage.iterator().next().getKey()));
 		}
 		else { // parentEntry.getRightChild().equals(page.getId())
 			otherPage = (BTreeInternalPage) dirtypages.get(parentEntry.getLeftChild());
-			System.out.println(otherPage.getId());
+			// System.out.println(otherPage.getId());
 			assertTrue(field.compare(Op.GREATER_THAN_OR_EQ, 
 					otherPage.reverseIterator().next().getKey()));
 		}
 		
 		int totalEntries = page.getNumEntries() + otherPage.getNumEntries();
 		assertEquals(entriesPerPage - 1, totalEntries);
-		System.out.println(entriesPerPage/2);
-		System.out.println(page.getNumEntries()+" "+otherPage.getNumEntries());
+		// System.out.println(entriesPerPage/2);
+		// System.out.println(page.getNumEntries()+" "+otherPage.getNumEntries());
 		assertTrue(entriesPerPage/2 == page.getNumEntries() || 
 				entriesPerPage/2 - 1 == page.getNumEntries());
 		assertTrue(entriesPerPage/2 == otherPage.getNumEntries() || 

@@ -356,7 +356,7 @@ public class BTreeLeafPage extends BTreePage {
         RecordId rid = new RecordId(pid, goodSlot);
         t.setRecordId(rid);
         tuples[goodSlot] = t;
-        System.out.println("insertTuple: " + t+" "+pid);
+        // System.out.println("insertTuple: " + t+" "+pid);
     }
 
     /**
