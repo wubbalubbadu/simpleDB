@@ -2398,7 +2398,6 @@ simpledb.transaction.TransactionId
 java.util.Map
 simpledb.common.Database
 simpledb.common.Permissions
-java.lang.String
 simpledb.execution.Predicate$Op
 java.io.PrintStream
 simpledb.storage.PageId
@@ -2608,6 +2607,7 @@ java.lang.Object
 java.io.Serializable
 ||:simpledb.systemtest.BTreeFileInsertTest
 simpledb.index.BTreeEntry
+java.lang.System
 junit.framework.JUnit4TestAdapter
 simpledb.index.BTreeUtility
 simpledb.storage.IntField
@@ -2620,11 +2620,15 @@ simpledb.execution.Predicate
 simpledb.transaction.TransactionId
 simpledb.common.Database
 simpledb.common.Permissions
+java.lang.String
 simpledb.execution.Predicate$Op
 simpledb.systemtest.SimpleDbTestBase
+java.io.PrintStream
+java.lang.invoke.MethodHandles$Lookup
 simpledb.index.BTreeLeafPage
 java.util.Iterator
 simpledb.storage.Tuple
+java.lang.invoke.MethodHandles
 simpledb.index.BTreeChecker
 simpledb.storage.Field
 java.io.File
@@ -2635,6 +2639,7 @@ simpledb.execution.IndexPredicate
 simpledb.index.BTreeInternalPage
 simpledb.systemtest.BTreeFileInsertTest
 java.lang.Object
+java.lang.invoke.StringConcatFactory
 org.junit.Assert
 ||:simpledb.execution.Project
 simpledb.common.DbException
