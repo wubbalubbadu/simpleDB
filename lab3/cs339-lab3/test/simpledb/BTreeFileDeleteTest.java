@@ -170,12 +170,15 @@ public class BTreeFileDeleteTest extends SimpleDbTestBase {
 		rightPage.setLeftSiblingId(leftPageId);
 		
 		int totalTuples = leftPage.getNumTuples() + rightPage.getNumTuples();
-		
+		// System.out.println("total tuples: " + totalTuples+" "+leftPage.getNumTuples()+" "+rightPage.getNumTuples());
 		Map<PageId, Page> dirtypages = new HashMap<>();
 		dirtypages.put(leftPageId, leftPage);
 		dirtypages.put(rightPageId, rightPage);
 		dirtypages.put(parentId, parent);
+		
 		empty.mergeLeafPages(tid, dirtypages, leftPage, rightPage, parent, entry);
+		// System.out.println("AFTER: " + totalTuples+" "+leftPage.getNumTuples()+" "+rightPage.getNumTuples());
+		
 		assertEquals(totalTuples, leftPage.getNumTuples());
 		assertEquals(0, rightPage.getNumTuples());
 		assertEquals(null, leftPage.getRightSiblingId());
