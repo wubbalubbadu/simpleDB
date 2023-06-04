@@ -6,11 +6,14 @@ import simpledb.common.DeadlockException;
 import simpledb.common.Permissions;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
+import simpledb.transaction.LockManager;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import java.lang.Thread;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -41,6 +44,7 @@ public class BufferPool {
     private final Random random = new Random();
     final int numPages;   // number of pages -- currently, not enforced
     final ConcurrentMap<PageId, Page> pages; // hash table storing current pages in memory
+    public LockManager lockManager; // lock manager
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -50,6 +54,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         this.numPages = numPages;
         this.pages = new ConcurrentHashMap<>();
+        this.lockManager = new LockManager();
     }
 
     public static int getPageSize() {
@@ -86,6 +91,17 @@ public class BufferPool {
         // XXX Yuan points out that HashMap is not synchronized, so this is buggy.
         // XXX TODO(ghuo): do we really know enough to implement NO STEAL here?
         //     won't we still evict pages?
+        
+        boolean gotLock = false;
+        while (!gotLock) {
+            gotLock = perm == Permissions.READ_ONLY ? lockManager.acquireSharedLock(tid, pid) : lockManager.acquireExclusiveLock(tid, pid);
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         Page p;
         synchronized (this) {
             p = pages.get(pid);
@@ -112,7 +128,7 @@ public class BufferPool {
      * @param pid the ID of the page to unlock
      */
     public void unsafeReleasePage(TransactionId tid, PageId pid) {
-        // TODO: some code goes here
+        lockManager.releaseLock(tid, pid);
     }
 
     /**
@@ -121,7 +137,7 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      */
     public void transactionComplete(TransactionId tid) {
-        // TODO: some code goes here
+        lockManager.releaseAllLocks(tid);
     }
 
     /**
