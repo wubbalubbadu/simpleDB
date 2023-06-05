@@ -12,11 +12,13 @@ public class LockManager {
     private ConcurrentHashMap<PageId, List<Lock>> lockTable;
     private ConcurrentHashMap<PageId, List<Lock>> waitTable;
     private ConcurrentHashMap<TransactionId, List<PageId>> transactionTable;
+    private ConcurrentHashMap<TransactionId, List<TransactionId>> dependencyTable;
 
     public LockManager() {
         lockTable = new ConcurrentHashMap<>();
         waitTable = new ConcurrentHashMap<>();
         transactionTable = new ConcurrentHashMap<>();
+        dependencyTable = new ConcurrentHashMap<>();
     }
 
     public synchronized boolean acquireSharedLock(TransactionId tid, PageId pid){
@@ -41,6 +43,14 @@ public class LockManager {
                     if (!waitTable.get(pid).contains(pendingLock)) {
                         waitTable.get(pid).add(pendingLock);
                     }
+                    // add dependency to dependencyTable
+                    if (!dependencyTable.containsKey(tid)) {
+                        dependencyTable.put(tid, new ArrayList<>());
+                    }
+                    // lock.getTransactionId() is the transaction that holds the exclusive lock
+                    if (!dependencyTable.get(tid).contains(lock.getTransactionId())) {
+                        dependencyTable.get(tid).add(lock.getTransactionId());
+                    }
                     return false;
                 }
             }
@@ -56,7 +66,9 @@ public class LockManager {
         // remove from waitTable if it is in waitTable
         if (waitTable.containsKey(pid)) {
             waitTable.get(pid).remove(newLock);
+            // remove dependency from dependencyTable
         }
+        
         return true;   
     }
 
@@ -76,6 +88,14 @@ public class LockManager {
                 // add to waitTable if it is not in waitTable
                 if (!waitTable.get(pid).contains(pendingLock)) {
                     waitTable.get(pid).add(pendingLock);
+                }
+                // add dependency to dependencyTable
+                if (!dependencyTable.containsKey(tid)) {
+                    dependencyTable.put(tid, new ArrayList<>());
+                }
+                // lock.getTransactionId() is the transaction that holds the exclusive lock
+                if (!dependencyTable.get(tid).contains(lock.getTransactionId())) {
+                    dependencyTable.get(tid).add(lock.getTransactionId());
                 }
                 return false;
             } 
@@ -108,6 +128,15 @@ public class LockManager {
         for (Lock lock : locks) {
             if (lock.getTransactionId().equals(tid)) {
                 locks.remove(lock);
+                // remove dependency from every transaction that depends on this transaction
+                for (TransactionId dependingTid : dependencyTable.keySet()) {
+                    if (dependencyTable.get(dependingTid).contains(tid)) {
+                        dependencyTable.get(dependingTid).remove(tid);
+                    }
+                    if (dependencyTable.get(dependingTid).size() == 0) {
+                        dependencyTable.remove(dependingTid);
+                    }
+                }
                 break;
             }
         }
@@ -122,7 +151,6 @@ public class LockManager {
                         acquireSharedLock(tid, pid);
                     } else {
                         acquireExclusiveLock(tid, pid);
-                        break;
                     }
                 }
             }
@@ -169,6 +197,26 @@ public class LockManager {
     // return dirty pages for a specific transaction
     public synchronized List<PageId> getDirtyPages(TransactionId tid){
         return transactionTable.get(tid);
+    }
+
+    public synchronized boolean deadlockDetection(TransactionId tid){
+        if (!dependencyTable.containsKey(tid)) {
+            return false;
+        }
+        // detect cycle in dependency graph
+        List<TransactionId> visited = new ArrayList<>();
+        TransactionId curr = tid;
+        while (true) {
+            if (visited.contains(curr)) {
+                return true;
+            }
+            visited.add(curr);
+            if (!dependencyTable.containsKey(curr)) {
+                return false;
+            }
+            curr = dependencyTable.get(curr).get(0);
+        }
+        return false;
     }
 
 }
