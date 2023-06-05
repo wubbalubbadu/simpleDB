@@ -82,6 +82,21 @@ public class TransactionTest extends TestUtil.CreateHeapFile {
 
     p.insertTuple(t);
     p.markDirty(true, tid1);
+    // // check that our tuple is there
+    // Iterator<Tuple> it1 = p.iterator();
+    // boolean found1 = false;
+    // while (it1.hasNext()) {
+    //   Tuple tup = it1.next();
+    //   IntField f0 = (IntField) tup.getField(0);
+    //   IntField f1 = (IntField) tup.getField(1);
+
+    //   if (f0.getValue() == 6 && f1.getValue() == 830) {
+    //     found1 = true;
+    //     break;
+    //   }
+    // }
+    // assertEquals(true, found1);
+    System.out.println("new tuple inserted");
     bp.transactionComplete(tid1, commit);
 
     // now, flush the buffer pool and access the page again from disk.

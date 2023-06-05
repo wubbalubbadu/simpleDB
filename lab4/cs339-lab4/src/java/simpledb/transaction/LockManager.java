@@ -20,6 +20,7 @@ public class LockManager {
     }
 
     public synchronized boolean acquireSharedLock(TransactionId tid, PageId pid){
+        // System.out.println("acquireSharedLock");
         if (!lockTable.containsKey(pid)) {
             lockTable.put(pid, new ArrayList<>());
         }
@@ -47,6 +48,7 @@ public class LockManager {
         // if there is no exclusive lock, add a shared lock
         Lock newLock = new Lock(tid, Permissions.READ_ONLY);
         locks.add(newLock);
+        lockTable.put(pid, locks);
         if (!transactionTable.containsKey(tid)) {
             transactionTable.put(tid, new ArrayList<>());
         }
@@ -59,6 +61,7 @@ public class LockManager {
     }
 
     public synchronized boolean acquireExclusiveLock(TransactionId tid, PageId pid){
+        // System.out.println("acquireExclusiveLock");
         if (!lockTable.containsKey(pid)) {
             lockTable.put(pid, new ArrayList<>());
         }
@@ -83,6 +86,7 @@ public class LockManager {
 
         Lock newLock = new Lock(tid, Permissions.READ_WRITE);
         locks.add(newLock);
+        lockTable.put(pid, locks);
         if (!transactionTable.containsKey(tid)) {
             transactionTable.put(tid, new ArrayList<>());
         }
@@ -107,6 +111,8 @@ public class LockManager {
                 break;
             }
         }
+        lockTable.put(pid, locks);
+
         // check if there is any lock in waitTable
         if (waitTable.containsKey(pid)) {
             List<Lock> pendingLocks = waitTable.get(pid);
@@ -125,6 +131,13 @@ public class LockManager {
         if (locks.size() == 0) {
             lockTable.remove(pid);
         }
+
+        // remove from transactionTable
+        List<PageId> dirtyPages = transactionTable.get(tid);
+        if (dirtyPages != null) {
+            dirtyPages.remove(pid);
+        }
+        transactionTable.put(tid, dirtyPages);
         return true;
     }
 
@@ -134,37 +147,28 @@ public class LockManager {
         if (dirtyPages == null) {
             return false;
         }
-        for (PageId pid : dirtyPages) {
-            List<Lock> locks = lockTable.get(pid);
-            for (Lock lock : locks) {
-                if (lock.getTransactionId().equals(tid)) {
-                    locks.remove(lock);
-                    break;
-                }
-            }
-            // check if there is any lock in waitTable
-            if (waitTable.containsKey(pid)) {
-                List<Lock> pendingLocks = waitTable.get(pid);
-                for (Lock pendingLock : pendingLocks) {
-                    if (pendingLock.getTransactionId().equals(tid)) {
-                        if (pendingLock.getPermission().equals(Permissions.READ_ONLY)) {
-                            acquireSharedLock(tid, pid);
-                        } else {
-                            acquireExclusiveLock(tid, pid);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (locks.size() == 0) {
-                lockTable.remove(pid);
-            }
+        List<PageId> tempDirtyPages = new ArrayList<>(dirtyPages); // create a copy of dirtyPages
+        for (PageId pid : tempDirtyPages) {
+            releaseLock(tid, pid);
         }
         return true;
     }
 
-    
+    /**
+     * Return true if the specified transaction has a lock on the specified page
+     */
+    public synchronized boolean holdsLock(TransactionId tid, PageId pid){
+        // check if the transaction has a lock on the page
+        return transactionTable.containsKey(tid) && transactionTable.get(tid).contains(pid);
+    }
 
-   
+    public synchronized boolean isPageLocked(PageId pid){
+        return lockTable.containsKey(pid) && lockTable.get(pid).size() > 0;
+    }
+
+    // return dirty pages for a specific transaction
+    public synchronized List<PageId> getDirtyPages(TransactionId tid){
+        return transactionTable.get(tid);
+    }
+
 }

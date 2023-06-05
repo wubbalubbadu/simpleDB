@@ -91,15 +91,17 @@ public class BufferPool {
         // XXX Yuan points out that HashMap is not synchronized, so this is buggy.
         // XXX TODO(ghuo): do we really know enough to implement NO STEAL here?
         //     won't we still evict pages?
-        
+        // System.out.println("getPage");
         boolean gotLock = false;
         while (!gotLock) {
             gotLock = perm == Permissions.READ_ONLY ? lockManager.acquireSharedLock(tid, pid) : lockManager.acquireExclusiveLock(tid, pid);
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        
+            // try {
+            //     Thread.sleep(1);
+            //     System.out.println("Thread " + tid.getId() + " is waiting for lock on page " + pid);
+            // } catch (InterruptedException e) {
+            //     e.printStackTrace();
+            // }
         }
 
         Page p;
@@ -137,7 +139,7 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      */
     public void transactionComplete(TransactionId tid) {
-        lockManager.releaseAllLocks(tid);
+        transactionComplete(tid, true);
     }
 
     /**
@@ -145,8 +147,8 @@ public class BufferPool {
      */
     public boolean holdsLock(TransactionId tid, PageId p) {
         // TODO: some code goes here
-        // not necessary for lab1|lab2
-        return false;
+        
+        return lockManager.holdsLock(tid, p);
     }
 
     /**
@@ -157,7 +159,36 @@ public class BufferPool {
      * @param commit a flag indicating whether we should commit or abort
      */
     public void transactionComplete(TransactionId tid, boolean commit) {
-        // TODO: some code goes here
+        List<PageId> dirtyPages = lockManager.getDirtyPages(tid);
+        if (commit) {
+            // flush dirty pages associated to the transaction
+            try {
+                flushPages(tid);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            // restore pages associated to the transaction
+            if (dirtyPages != null) {
+                for (PageId pid : dirtyPages) {
+                    Page p = pages.get(pid);
+                    if (p != null) {
+                        DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+                        p = file.readPage(pid);
+                        if (pages.size() >= numPages){
+                            try {
+                                evictPage();
+                            } catch (DbException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        pages.put(p.getId(), p);
+                    }
+                }
+            }
+        }
+        lockManager.releaseAllLocks(tid);
     }
 
     /**
@@ -275,7 +306,7 @@ public class BufferPool {
      * @param pid an ID indicating the page to flush
      */
     private synchronized void flushPage(PageId pid) throws IOException {
-
+        
         Page p = pages.get(pid);
         if (p == null)
             return; //not in buffer pool -- doesn't need to be flushed
@@ -289,7 +320,19 @@ public class BufferPool {
      * Write all pages of the specified transaction to disk.
      */
     public synchronized void flushPages(TransactionId tid) throws IOException {
-        // TODO: some code goes here
+        List<PageId> dirtyPages = lockManager.getDirtyPages(tid);
+        // print out dirty pages
+        System.out.println("FLUSHING transaction " + tid);
+        System.out.println(dirtyPages.size() + " dirty pages");
+        for (PageId pid : dirtyPages) {
+            System.out.println("dirty page: " + pid);
+        }
+
+        if (dirtyPages != null) {
+            for (PageId pid : dirtyPages) {
+                flushPage(pid);
+            }
+        }
     }
 
     /**
@@ -304,17 +347,17 @@ public class BufferPool {
         PageId pid = (PageId) pids[random.nextInt(pids.length)];
         try {
             Page p = pages.get(pid);
-            if (p.isDirty() != null) { //if this is dirty, remove first non-dirty
+            if (p.isDirty() != null || lockManager.isPageLocked(pid)) { //if this is dirty, remove first non-dirty
                 boolean gotNew = false;
                 for (PageId pg : pages.keySet()) {
-                    if (pages.get(pg).isDirty() == null) {
+                    if (pages.get(pg).isDirty() == null || !lockManager.isPageLocked(pg)) {
                         pid = pg;
                         gotNew = true;
                         break;
                     }
                 }
                 if (!gotNew) {
-                    throw new DbException("All buffer pool slots contain dirty pages;  COMMIT or ROLLBACK to continue.");
+                    throw new DbException("All buffer pool slots contain dirty pages or is locked;  COMMIT or ROLLBACK to continue.");
                 }
             }
             //XXX: The above code makes sure page is not dirty. 
