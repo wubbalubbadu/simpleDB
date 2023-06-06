@@ -96,7 +96,7 @@ public class TransactionTest extends TestUtil.CreateHeapFile {
     //   }
     // }
     // assertEquals(true, found1);
-    System.out.println("new tuple inserted");
+    // System.out.println("new tuple inserted");
     bp.transactionComplete(tid1, commit);
 
     // now, flush the buffer pool and access the page again from disk.

@@ -89,13 +89,16 @@ public class BufferPool {
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
         // XXX Yuan points out that HashMap is not synchronized, so this is buggy.
-        // XXX TODO(ghuo): do we really know enough to implement NO STEAL here?
+        // XXX (ghuo): do we really know enough to implement NO STEAL here?
         //     won't we still evict pages?
         // System.out.println("getPage");
         boolean gotLock = false;
+        
         while (!gotLock) {
             gotLock = perm == Permissions.READ_ONLY ? lockManager.acquireSharedLock(tid, pid) : lockManager.acquireExclusiveLock(tid, pid);
-        
+            if (!gotLock && lockManager.deadlockDetection(tid)) {
+                throw new TransactionAbortedException();
+            }
             // try {
             //     Thread.sleep(1);
             //     System.out.println("Thread " + tid.getId() + " is waiting for lock on page " + pid);
@@ -145,9 +148,7 @@ public class BufferPool {
     /**
      * Return true if the specified transaction has a lock on the specified page
      */
-    public boolean holdsLock(TransactionId tid, PageId p) {
-        // TODO: some code goes here
-        
+    public boolean holdsLock(TransactionId tid, PageId p) {     
         return lockManager.holdsLock(tid, p);
     }
 
@@ -322,11 +323,11 @@ public class BufferPool {
     public synchronized void flushPages(TransactionId tid) throws IOException {
         List<PageId> dirtyPages = lockManager.getDirtyPages(tid);
         // print out dirty pages
-        System.out.println("FLUSHING transaction " + tid);
-        System.out.println(dirtyPages.size() + " dirty pages");
-        for (PageId pid : dirtyPages) {
-            System.out.println("dirty page: " + pid);
-        }
+        // System.out.println("FLUSHING transaction " + tid);
+        // System.out.println(dirtyPages.size() + " dirty pages");
+        // for (PageId pid : dirtyPages) {
+        //     System.out.println("dirty page: " + pid);
+        // }
 
         if (dirtyPages != null) {
             for (PageId pid : dirtyPages) {

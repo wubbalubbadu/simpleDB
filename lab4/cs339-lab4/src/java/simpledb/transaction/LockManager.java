@@ -21,7 +21,7 @@ public class LockManager {
         dependencyTable = new ConcurrentHashMap<>();
     }
 
-    public synchronized boolean acquireSharedLock(TransactionId tid, PageId pid){
+    public synchronized boolean acquireSharedLock(TransactionId tid, PageId pid) {
         // System.out.println("acquireSharedLock");
         if (!lockTable.containsKey(pid)) {
             lockTable.put(pid, new ArrayList<>());
@@ -55,6 +55,13 @@ public class LockManager {
                 }
             }
         }
+
+        // check if the first one is waitTable is the same transaction
+        if (waitTable.containsKey(pid) && waitTable.get(pid).get(0).getTransactionId().equals(tid)) {
+            // if it is not the same transaction, return false
+            return false;
+        }
+
         // if there is no exclusive lock, add a shared lock
         Lock newLock = new Lock(tid, Permissions.READ_ONLY);
         locks.add(newLock);
@@ -104,6 +111,12 @@ public class LockManager {
             }
         }
 
+        // check if the first one is waitTable is the same transaction
+        if (waitTable.containsKey(pid) && waitTable.get(pid).get(0).getTransactionId().equals(tid)) {
+            // if it is not the same transaction, return false
+            return false;
+        }
+
         Lock newLock = new Lock(tid, Permissions.READ_WRITE);
         locks.add(newLock);
         lockTable.put(pid, locks);
@@ -132,6 +145,7 @@ public class LockManager {
                 for (TransactionId dependingTid : dependencyTable.keySet()) {
                     if (dependencyTable.get(dependingTid).contains(tid)) {
                         dependencyTable.get(dependingTid).remove(tid);
+                        
                     }
                     if (dependencyTable.get(dependingTid).size() == 0) {
                         dependencyTable.remove(dependingTid);
@@ -142,19 +156,19 @@ public class LockManager {
         }
         lockTable.put(pid, locks);
 
-        // check if there is any lock in waitTable
-        if (waitTable.containsKey(pid)) {
-            List<Lock> pendingLocks = waitTable.get(pid);
-            for (Lock pendingLock : pendingLocks) {
-                if (pendingLock.getTransactionId().equals(tid)) {
-                    if (pendingLock.getPermission().equals(Permissions.READ_ONLY)) {
-                        acquireSharedLock(tid, pid);
-                    } else {
-                        acquireExclusiveLock(tid, pid);
-                    }
-                }
-            }
-        }
+        // // check if there is any lock in waitTable
+        // if (waitTable.containsKey(pid)) {
+        //     List<Lock> pendingLocks = waitTable.get(pid);
+        //     for (Lock pendingLock : pendingLocks) {
+        //         if (pendingLock.getTransactionId().equals(tid)) {
+        //             if (pendingLock.getPermission().equals(Permissions.READ_ONLY)) {
+        //                 acquireSharedLock(tid, pid);
+        //             } else {
+        //                 acquireExclusiveLock(tid, pid);
+        //             }
+        //         }
+        //     }
+        // }
 
         if (locks.size() == 0) {
             lockTable.remove(pid);
@@ -216,7 +230,6 @@ public class LockManager {
             }
             curr = dependencyTable.get(curr).get(0);
         }
-        return false;
     }
 
 }
